@@ -1,0 +1,8 @@
+q2C
+q2L
+q1C2L
+q1L2C
+q2C1L
+q2L1C
+q2C2L
+q2L2C
