@@ -3,7 +3,7 @@ q0,q2C,q1,q2,q3,q4,q1Ca,q1Cb,q1Cc,q1Cd,q1Ce
 q1,q0,q2C,q2,q3,q4,q1Ca,q1Cb,q1Cc,q1Cd,q1Ce
 q2,q0,q1,q2C,q3,q4,q1Ca,q1Cb,q1Cc,q1Cd,q1Ce
 q3,q0,q1,q2,q2C,q4,q1Ca,q1Cb,q1Cc,q1Cd,q1Ce
-q4,q0,q1,q2,q3,12C,q1Ca,q1Cb,q1Cc,q1Cd,q1Ce
+q4,q0,q1,q2,q3,q2C,q1Ca,q1Cb,q1Cc,q1Cd,q1Ce
 qa,q1L0,q1L1,q1L2,q1L3,q1L4,q2L,qb,qc,qd,qe
 qb,q1L0,q1L1,q1L2,q1L3,q1L4,qa,q2L,qc,qd,qe
 qc,q1L0,q1L1,q1L2,q1L3,q1L4,qa,qb,q2L,qd,qe
