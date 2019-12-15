@@ -15,11 +15,14 @@ class Dfa(
         }
     }
 
-    fun getCurrentStateInfo(): String {
-        return if (finished) {
-            "Finished state: $currentState"
-        } else {
-            "Current state: $currentState"
-        }
+    fun getState() = if (finished) {
+        State.Finished(currentState)
+    } else {
+        State.Working(currentState)
+    }
+
+    sealed class State(val value: String) {
+        class Working(value: String) : State(value)
+        class Finished(value: String) : State(value)
     }
 }

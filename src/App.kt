@@ -1,106 +1,63 @@
 import java.io.File
 
-class Nfa(
-    private val transitionTable: Map<String, Map<String, List<String>>>,
-    val currentStates: MutableList<String>,
-    val statesHistory: MutableList<String> = mutableListOf()
-) {
-
-    fun processNextSymbol(symbol: String) {
-        val nextStates = currentStates.mapNotNull { currentState ->
-            transitionTable[currentState]?.entries
-                ?.find { it.key == symbol }
-                ?.value
-        }.flatten()
-        statesHistory.addAll(currentStates)
-        currentStates.clear()
-        currentStates.addAll(nextStates)
+fun main() {
+    println("Choose finite state machine: DFA('D'), NFA('N')  ")
+    var fsmType = readLine()
+    while (fsmType != "D" && fsmType != "N") {
+        println("Wrong input, try again:")
+        fsmType = readLine()
+    }
+    when (fsmType) {
+        "D" -> runDfa()
+        "N" -> runNfa()
     }
 }
 
-fun main() {
-    val entriesStream = File("nfa_data/entries.txt").inputStream()
-    val entries = entriesStream.bufferedReader().use {
-        it.readText().split("#")
-    }
-    val alphabetStream = File("nfa_data/alphabet.txt").inputStream()
-    val alphabet = alphabetStream.bufferedReader().use {
-        it.readText().split(",")
-    }
-    val transitionTableStream = File("nfa_data/tt.txt").inputStream()
-    val transitionTable = mutableMapOf<String, Map<String, List<String>>>()
-    transitionTableStream.bufferedReader().useLines { lines ->
-        lines.forEach {
-            val states = it.split(",")
-            val inState = states.first()
-            val transitionMap = states.drop(1).mapIndexed { index, outState ->
-                if (outState.contains("#")) {
-                    val multiStates = outState.split("#")
-                    Pair(alphabet[index], multiStates)
-                } else {
-                    Pair(alphabet[index], listOf(outState))
-                }
-            }.toMap()
-            transitionTable[inState] = transitionMap
-        }
-    }
-    val acceptStatesStream = File("nfa_data/accept_states.txt").inputStream()
-    val acceptStates = mutableListOf<String>()
-    acceptStatesStream.bufferedReader().useLines { lines ->
-        lines.forEach { acceptStates.add(it) }
-    }
+fun runNfa() {
+    val entries = readTextFromFile("nfa_data/entries.txt")
+    val alphabet = readTextFromFile("nfa_data/alphabet.txt")
+    val transitionTable =
+        readNfaTransitionTableFromFile("nfa_data/tt.txt", alphabet)
+    val acceptStates = readTextFromFile("nfa_data/accept_states.txt")
     val startState = transitionTable.keys.first()
+    displayAlphabet(alphabet)
     entries.forEach { entry ->
-        val nfa = Nfa(transitionTable, listOf(startState).toMutableList())
+        println("Series: $entry")
+        val nfa = Nfa(transitionTable, acceptStates, mutableListOf(startState))
         entry.chunked(1).forEach { symbol ->
+            if (nfa.finished) return@forEach
             println("Current state(s): ${nfa.currentStates}")
             nfa.processNextSymbol(symbol)
         }
+        nfa.finished = true
         println("Current state(s): ${nfa.currentStates}")
-        if (acceptStates.any { nfa.currentStates.contains(it) }) {
-            when {
-                nfa.currentStates.any { it.contains("2C2L") || it.contains("2L2C") } -> {
-                    println("Repetition occurred in both numbers and letters")
-                }
-                nfa.currentStates.any { it.contains("2C") } -> {
-                    println("Repetition occurred in numbers")
-                }
-                else -> {
-                    println("Repetition occurred in letters")
-                }
-            }
+        val stateMessage = when (nfa.getState()) {
+            is Nfa.State.Working -> "Working"
+            is Nfa.State.Failure -> "Series not accepted by nfa"
+            is Nfa.State.Success.RepetitionInBoth ->
+                "Repetition occurred in both numbers and letters"
+            is Nfa.State.Success.RepetitionInNumbers ->
+                "Repetition occurred in numbers"
+            is Nfa.State.Success.RepetitionInLetters ->
+                "Repetition occurred in letters"
+            Nfa.State.Undefined -> "Undefined state"
         }
-        println("States history: ${nfa.statesHistory}")
-        println("Type anything to process next series")
+        println(stateMessage)
+        nfa.paths.forEach { println(it.joinToString(" -> ")) }
+        println("Type enter to process next series")
         readLine()
     }
+    println("All series processed")
 }
 
 fun runDfa() {
-    val alphabetStream = File("dfa_data/alphabet.txt").inputStream()
-    val alphabet = alphabetStream.bufferedReader().use {
-        it.readText().split(",")
-    }
-    val transitionTableStream = File("dfa_data/tt.txt").inputStream()
-    val transitionTable = mutableMapOf<String, Map<String, String>>()
-    transitionTableStream.bufferedReader().useLines { lines ->
-        lines.forEach {
-            val states = it.split(",")
-            val inState = states.first()
-            val transitionMap = states.drop(1).mapIndexed { index, outState ->
-                Pair(alphabet[index], outState)
-            }.toMap()
-            transitionTable[inState] = transitionMap
-        }
-    }
-    val acceptStatesStream = File("dfa_data/accept_states.txt").inputStream()
-    val acceptStates = mutableListOf<String>()
-    acceptStatesStream.bufferedReader().useLines { lines ->
-        lines.forEach { acceptStates.add(it) }
-    }
+    val alphabet = readTextFromFile("dfa_data/alphabet.txt")
+    val transitionTable =
+        readDfaTransitionTableFromFile("dfa_data/tt.txt", alphabet)
+    val acceptStates = readTextFromFile("dfa_data/accept_states.txt", "\n")
     val startState = transitionTable.keys.first()
     val dfa = Dfa(transitionTable, acceptStates, startState)
-    println("Alphabet = { " + alphabet.joinToString(",") + "}")
+    displayAlphabet(alphabet)
     while (!dfa.finished) {
         println("Enter symbol from alphabet:")
         var input = readLine()
@@ -110,7 +67,64 @@ fun runDfa() {
         }
         input?.let {
             dfa.processNextSymbol(it.toLowerCase())
-            println(dfa.getCurrentStateInfo())
+            val stateMessage = when (val dfaState = dfa.getState()) {
+                is Dfa.State.Working -> "Current state: ${dfaState.value}"
+                is Dfa.State.Finished -> "Finished state: ${dfaState.value}"
+            }
+            println(stateMessage)
         }
     }
+}
+
+fun displayAlphabet(alphabet: List<String>) {
+    println("Σ = { " + alphabet.joinToString(",") + " }")
+}
+
+fun readTextFromFile(path: String, delimiter: String = "#") =
+    File(path).inputStream().bufferedReader().use {
+        it.readText().split(delimiter)
+    }
+
+fun readNfaTransitionTableFromFile(
+    path: String,
+    alphabet: List<String>,
+    stateDelimiter: String = ",",
+    statesDelimiter: String = "#"
+): Map<String, Map<String, List<String>>> {
+    val transitionTable = mutableMapOf<String, Map<String, List<String>>>()
+    File(path).inputStream().bufferedReader().useLines { lines ->
+        lines.forEach {
+            val states = it.split(stateDelimiter)
+            val inState = states.first()
+            val transitionMap = states.drop(1).mapIndexed { index, outState ->
+                if (outState.contains(statesDelimiter)) {
+                    val multiStates = outState.split(statesDelimiter)
+                    Pair(alphabet[index], multiStates)
+                } else {
+                    Pair(alphabet[index], listOf(outState))
+                }
+            }.toMap()
+            transitionTable[inState] = transitionMap
+        }
+    }
+    return transitionTable
+}
+
+fun readDfaTransitionTableFromFile(
+    path: String,
+    alphabet: List<String>,
+    stateDelimiter: String = ","
+): Map<String, Map<String, String>> {
+    val transitionTable = mutableMapOf<String, Map<String, String>>()
+    File(path).inputStream().bufferedReader().useLines { lines ->
+        lines.forEach {
+            val states = it.split(stateDelimiter)
+            val inState = states.first()
+            val transitionMap = states.drop(1).mapIndexed { index, outState ->
+                Pair(alphabet[index], outState)
+            }.toMap()
+            transitionTable[inState] = transitionMap
+        }
+    }
+    return transitionTable
 }
