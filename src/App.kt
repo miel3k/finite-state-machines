@@ -43,8 +43,8 @@ fun runNfa() {
             Nfa.State.Undefined -> "Undefined state"
         }
         println(stateMessage)
-        nfa.paths.forEach { println(it.joinToString(" -> ")) }
-        println("Type enter to process next series")
+        (nfa.terminatedPaths + nfa.paths).forEach { displayPath(it) }
+        println("Type 'p' to process next series")
         readLine()
     }
     println("All series processed")
@@ -74,6 +74,11 @@ fun runDfa() {
             println(stateMessage)
         }
     }
+    displayPath(dfa.path)
+}
+
+fun displayPath(path: List<String>) {
+    println(path.joinToString(" -> "))
 }
 
 fun displayAlphabet(alphabet: List<String>) {

@@ -3,28 +3,30 @@ class Nfa(
     private val acceptStates: List<String>,
     val currentStates: MutableList<String>,
     val paths: MutableList<List<String>> = mutableListOf(),
+    val terminatedPaths: MutableList<List<String>> = mutableListOf(),
     var finished: Boolean = false
 ) {
 
     fun processNextSymbol(symbol: String) {
         if (paths.isEmpty()) paths.add(currentStates)
-        val pathsCopy = paths.toMutableList()
         val updatedPaths = mutableListOf<List<String>>()
         val nextStates = currentStates.map { currentState ->
-            getNextStates(symbol, currentState).also {
-                it.forEach { nextState ->
-                    pathsCopy.filter { states ->
-                        states.last() == currentState
-                    }.forEach { states ->
-                        updatedPaths.add((states + nextState).toMutableList())
+            getNextStates(symbol, currentState).also { nextStates ->
+                paths.forEach { path ->
+                    nextStates.forEach {
+                        if (path.last() == currentState) {
+                            if (isTerminatedState(it)) {
+                                terminatedPaths.add(path + it)
+                            } else {
+                                updatedPaths.add(path + it)
+                            }
+                        }
                     }
                 }
-                val terminatedPaths = pathsCopy.filterTerminatedPaths()
-                updatedPaths.addAll(terminatedPaths)
             }
         }.flatten()
-        reinitializePaths(updatedPaths)
-        reinitializeCurrentStates(nextStates)
+        reinitializePaths(updatedPaths.toMutableList())
+        reinitializeCurrentStates(nextStates.filterNotTerminated())
         if (nextStates.filterNotTerminated().isNullOrEmpty()) {
             finished = true
         }
@@ -53,20 +55,32 @@ class Nfa(
         currentStates.addAll(newCurrentStates)
     }
 
-    private fun MutableList<List<String>>.filterTerminatedPaths(): MutableList<List<String>> {
-        return filter { isTerminatedState(it.last()) }.toMutableList()
-    }
-
     fun getState() = when {
         !finished -> State.Working
         !acceptStates.any { currentStates.contains(it) } -> State.Failure
-        currentStates.any { it.contains("2C2L") || it.contains("2L2C") } ->
-            State.Success.RepetitionInBoth
-        currentStates.any { it.contains("2C") } ->
-            State.Success.RepetitionInNumbers
-        currentStates.any { it.contains("2L") } ->
-            State.Success.RepetitionInLetters
+        isRepetitionInBoth() -> State.Success.RepetitionInBoth
+        isRepetitionInNumbers() -> State.Success.RepetitionInNumbers
+        isRepetitionInLetters() -> State.Success.RepetitionInLetters
         else -> State.Undefined
+    }
+
+    private fun isRepetitionInBoth() =
+        isRepetitionInNumbers() && isRepetitionInLetters()
+
+    private fun isRepetitionInNumbers() = currentStates.any {
+        it.contains("00") ||
+                it.contains("11") ||
+                it.contains("22") ||
+                it.contains("33") ||
+                it.contains("44")
+    }
+
+    private fun isRepetitionInLetters() = currentStates.any {
+        it.contains("aa") ||
+                it.contains("bb") ||
+                it.contains("cc") ||
+                it.contains("dd") ||
+                it.contains("ee")
     }
 
     sealed class State {
