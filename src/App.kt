@@ -16,8 +16,7 @@ fun main() {
 fun runNfa() {
     val entries = readTextFromFile("nfa_data/entries.txt")
     val alphabet = readTextFromFile("nfa_data/alphabet.txt")
-    val transitionTable =
-        readNfaTransitionTableFromFile("nfa_data/tt.txt", alphabet)
+    val transitionTable = readNfaTransitionTableFromFile("nfa_data/tt.txt", alphabet)
     val acceptStates = readTextFromFile("nfa_data/accept_states.txt")
     val startState = transitionTable.keys.first()
     displayAlphabet(alphabet)
@@ -52,8 +51,7 @@ fun runNfa() {
 
 fun runDfa() {
     val alphabet = readTextFromFile("dfa_data/alphabet.txt")
-    val transitionTable =
-        readDfaTransitionTableFromFile("dfa_data/tt.txt", alphabet)
+    val transitionTable = readDfaTransitionTableFromFile("dfa_data/tt.txt", alphabet)
     val acceptStates = readTextFromFile("dfa_data/accept_states.txt", "\n")
     val startState = transitionTable.keys.first()
     val dfa = Dfa(transitionTable, acceptStates, startState)
